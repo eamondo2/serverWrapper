@@ -1,14 +1,32 @@
-var Discord = require('discord.js');
+const Discord = require('discord.js');
+const ConfigParser = require('configparser');
+const debug = require('debug')('botLog');
 
-const loginMessage = `client login with ${client.user.username}`;
+const name = 'discordbot';
+
+const config = new ConfigParser();
+
+config.read('localAuth');
+
+
+debug(`booting ${name}`);
 
 var client = new Discord.Client();
 
 
 function onReady(){
-    console.log(loginMessage);
+    debug(`client login with ${client.user.username}`);
+
 }
 
 client.on('ready', onReady);
 
+debug(`config token value is ${config.get('User', 'clientToken')}`);
 
+client.login(config.get('User', 'clientToken'));
+
+client.on('message', msg => {
+    if (msg.content === 'ping') {
+        msg.reply('pong');
+    }
+});

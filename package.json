@@ -4,11 +4,13 @@
   "description": "mc server discord status bot",
   "main": "discordbot.js",
   "scripts": {
-    "test": "say_hello"
+    "start": "node discordbot.js",
+    "pretest": "cross-env DEBUG='botLog'",
+    "test": "node discordbot.js"
   },
   "repository": {
-    "type" : "git",
-    "url"  : ""
+    "type": "git",
+    "url": ""
   },
   "author": "",
   "license": "ISC",
@@ -23,5 +25,8 @@
     "opusscript": "0.0.6",
     "rcon": "^1.0.3",
     "uws": "^10.148.1"
+  },
+  "devDependencies": {
+    "cross-env": "^5.2.0"
   }
 }
