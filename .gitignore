@@ -71,4 +71,4 @@ typings/
 
 # Serverless directories
 .serverless
-localAuth
+localConf
