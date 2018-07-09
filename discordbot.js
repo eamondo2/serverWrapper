@@ -1,32 +1,38 @@
 const Discord = require('discord.js');
 const ConfigParser = require('configparser');
-const debug = require('debug')('botLog');
+const debug = require('debug')('discordFrontend');
+const em = require('events').EventEmitter;
 
-const name = 'discordbot';
-
-const config = new ConfigParser();
-
-config.read('localAuth');
-
-
-debug(`booting ${name}`);
-
-var client = new Discord.Client();
+//initialize the discord bot
+/**
+ * initializes the discord bot, acts as class constructor
+ * @param {String} configLocation
+ */
+class discordFrontEnd {
 
 
-function onReady(){
-    debug(`client login with ${client.user.username}`);
+    /**
+     * initialize
+     * @param {String} configLocation 
+     * @param {ConfigParser} cParser
+     */
+    constructor(configLocation, cParser) {
+        this.confLocation = configLocation;
+        this.cParser = cParser;
 
+        //cache discord bot details
+        this.botToken = this.cParser.read('Client', 'clientToken');
+        this.clientName = this.cParser.read('Client', 'clientName');
+
+        this.discordClient = new Discord.Client();
+        debug(`Initializing discord frontend ${this.cParser.get('Client', 'clientName')}`);
+
+
+        
+    }
 }
 
-client.on('ready', onReady);
-
-debug(`config token value is ${config.get('User', 'clientToken')}`);
-
-client.login(config.get('User', 'clientToken'));
-
-client.on('message', msg => {
-    if (msg.content === 'ping') {
-        msg.reply('pong');
-    }
-});
+module.exports = {
+    discordFrontEnd
+};
+ 

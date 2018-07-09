@@ -1,16 +1,15 @@
 {
-  "name": "discordbot",
+  "name": "server-wrapper",
   "version": "1.0.0",
-  "description": "mc server discord status bot",
-  "main": "discordbot.js",
+  "description": "mc server wrapper and discord bot integration/frontend",
+  "main": "serverManager.js",
   "scripts": {
-    "start": "node discordbot.js",
-    "pretest": "cross-env DEBUG='botLog'",
-    "test": "node discordbot.js"
+    "start": "node serverManager.js",
+    "test": "cross-env DEBUG=* node serverManager.js"
   },
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/eamondo2/serverWrapper.git"
   },
   "author": "",
   "license": "ISC",
@@ -24,6 +23,7 @@
     "node-opus": "^0.3.0",
     "opusscript": "0.0.6",
     "rcon": "^1.0.3",
+    "systeminformation": "^3.42.3",
     "uws": "^10.148.1"
   },
   "devDependencies": {

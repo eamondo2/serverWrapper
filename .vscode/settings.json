@@ -9,5 +9,6 @@
  "remote.onstartup": true,
 
  // Port number to use for connection.
-"remote.port": 52698
+"remote.port": 52698,
+"eslint.enable": true
 }
