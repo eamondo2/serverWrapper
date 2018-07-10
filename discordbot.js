@@ -23,7 +23,8 @@ class discordFrontEnd {
         //cache discord bot details
         this.botToken = this.cParser.read('Client', 'clientToken');
         this.clientName = this.cParser.read('Client', 'clientName');
-
+        this.channel = this.cParser.read('Client', 'botChannel');
+        this.prefixFilter = this.cParser.read('Client', 'botPrefix');
         this.discordClient = new Discord.Client();
         debug(`Initializing discord frontend ${this.cParser.get('Client', 'clientName')}`);
 

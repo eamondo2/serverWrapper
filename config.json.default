@@ -1,0 +1,30 @@
+{
+    "client" : {
+        "clientID" : "",
+        "clientToken" : "",
+        "clientName" : "mcServStatus",
+        "bot" : {
+            "prefix" : "",
+            "channel" : ""
+        }
+    }, 
+    "hardware" : {
+        "pollingPeriod" : 10000,
+        "memUsagePctWarn" : 70,
+        "threadLoadLockTimeMax" : 300000
+    }, 
+    "serverManager" : {
+        "instances" : [
+            "default"
+        ], 
+        "default" : {
+            "instanceLocation" : "",
+            "instanceExec" : "",
+            "rconEnable" : ,
+            "rconPort" : "",
+            "rconPass" : "",
+            "rconAddress" : ""
+        }
+    }
+
+}

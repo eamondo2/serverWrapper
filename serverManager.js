@@ -36,6 +36,8 @@ class ServerInstance {
         this.confID = instanceConfig;
         this.confParser = confParserReference;
 
+        this.outputRegexQueue = [];
+
         this.initCommand = this.confParser.get(this.confID, 'instanceExec');
 
 
@@ -91,11 +93,22 @@ class ServerInstance {
     }
 
     /**
+     * allows for external hooking into server output
+     * internal queue of hooks
+     * @param {String} regex allows for passing triggers with specific regex catch?
+     */
+    registerOutputChannel( regex ) {
+
+    }
+
+    /**
      * Passes commands to the internal server instance
      * Has a special 
      * @param {String} commandArgument 
      */
     passCommand( commandArgument ) {
+        
+        
 
     }
 
