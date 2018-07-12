@@ -11,12 +11,11 @@ class hardwareMonitor {
 
     /**
      * initialize
-     * @param {String} configLocation 
+     * @param {String} config local config snippet 
      */
-    constructor ( configLocation, cParser ) {
+    constructor ( config) {
         //store the config file location
-        this.confLocation = configLocation;
-        this.cParser = cParser;
+        this.cfg = config;
         
 
         this.hostname = os.hostname();

@@ -1,20 +1,13 @@
 //external modules
 const rcon = require('rcon');
-const ConfigParser = require('configparser');
 const debug = require('debug')('serverManager');  
-const spawn = require('child_process').spawn;
-
+const cProc = require('child_process');
+const config = require('./config.json');
+const Promise = require('promise');
+const path = require('path');
 // local modules
 const hardwareMonitor = require('./hardwareMonitor.js');
 const discordFrontEnd = require('./discordbot.js');
-
-//local variables
-const confLocation = 'localConf';
-
-//Local config segment
-const config = new ConfigParser();
-config.read(confLocation);
-
 
 
 /**
@@ -25,30 +18,25 @@ class ServerInstance {
 
     /**
      * constructor
-     * @param {Array} manageQueueCallback callback for adding self to the global managed instance list/queue
-     * @param {String} instanceConfig  self's config identifier tag
-     * @param {ConfigParser} confParserReference self's pointer to the global config parser
+     * @param {config} cfg config file snippet, contains this instance's info
      */
-    constructor(manageQueueCallback, instanceConfig, confParserReference) {
-        //append self to global queue
-        manageQueueCallback.push(this);
+    constructor(cfg) {
+        
+        //handle list of regex parses for message queue
+        this.outputRegexQueue = {};
 
-        this.confID = instanceConfig;
-        this.confParser = confParserReference;
-
-        this.outputRegexQueue = [];
-
-        this.initCommand = this.confParser.get(this.confID, 'instanceExec');
-
+        this.cfg = cfg;
+        this.confID = this.cfg.instance;
+        
 
     }
 
     /**
      * 
      * @param {boolean} respawnIfDead 
-     * @param {Number} logLevel 0 - 3 NOT IMPLEMENTED
+     * @param {Number} logLevel 0, quiet, 1, print error, 2, print all
      */
-    initialize ( respawnIfDead, logLevel ) {
+    init ( respawnIfDead = this.autoRespawn, logLevel ) {
 
         this.debugLevel = logLevel;
         this.respawnIfDead = respawnIfDead;
@@ -56,24 +44,65 @@ class ServerInstance {
         debug(`${this.confID} Initializing server`);
 
         //spawn new instance
-        this.serverProcess = spawn( this.initCommand );
+        let p = path.resolve( __dirname, `${this.cfg.serverDir}`, `${this.cfg.instanceLocation}` );
+        this.serverProcess = cProc.spawn(`${this.cfg.instanceExec}`, ['/c', p], { 'cwd': path.resolve(__dirname, `${this.cfg.serverDir}`) });
 
         //hook listeners and state monitor for instance
 
         //message passing
-
+        this.serverProcess.stdout.on('data', (data) => this.messageParse( data ));
+        this.serverProcess.stderr.on('data', (data) => this.errorParse( data ));
+        //here we hook the output stream
 
         //terminated instance
-        this.serverProcess.on('exit', function( code, signal ) {
+        this.serverProcess.on('exit', ( code, signal ) => {
             //if we've exited, make sure we want to
             //if not, then queue for re-initialization
-            debug(`[${this.confID}] TERMINATED with signal ${signal}`);
+            debug(`[${this.confID}] TERMINATED with signal ${signal}:${code}`);
             if ( !this.terminating && this.respawnIfDead ) {
                 //we want to come back, so do the thing
-                this.initialize(true, 3);
+                setTimeout( () => this.init( true, this.debugLevel), 20000 );
             }
         });
 
+        this.serverProcess.on('error', ( err ) => {
+            debug(`[${this.confID}]  error: ${err}`);
+        });
+
+    }
+
+    /**
+     * This function catches the incoming server output
+     * @param {String} data incoming data from server instance
+     */
+    messageParse( data ) {
+        //check for exist regex
+        if ( this.outputRegexQueue !== null && this.outputRegexQueue.length !== 0 ) {
+            //for each of the internal regex items, check against and pass if needed
+            for ( let tag in this.outputRegexQueue ) {
+                let tmp = this.outputRegexQueue[tag];
+
+                if ( tmp.reg.exec( data ) !== null ) {
+                    
+                }                
+            }
+        }
+        //else we don't care, no messages are filtered for output
+        //unless debug print all
+        if ( this.debugLevel === 2 ) {
+            debug(`${this.confID}: ${data}`);
+        }
+       
+
+    }
+
+    /**
+     * This function catches incoming server stderr
+     * @param {String} data incoming error message from server instance
+     */
+    errorParse( data ) {
+        //for each of the internal error regex items, check against and pass if needed
+        debug(`Error from ${this.confID}: ${data}`);
     }
 
     /**
@@ -83,32 +112,57 @@ class ServerInstance {
     gracefulTerminate() {
 
         this.terminating = true;
-        this.serverProcess.send('stop\n')
-            .then( function( data ) {
-
-            })  
-            .catch( function( error ) {
-
-            });
+        this.passCommand('/stop');
+        debug(`[${this.confID}] Shutting down..`);
     }
 
     /**
      * allows for external hooking into server output
      * internal queue of hooks
-     * @param {String} regex allows for passing triggers with specific regex catch?
+     * @param {String} tag tag for annotating what the regex is for, also for indexing
+     * @param {RegExp} regex allows for passing triggers with specific regex catch?
+     * @param {function} cb callback for execution on regex match
      */
-    registerOutputChannel( regex ) {
+    registerOutputChannel( tag, regex, cb) {
+        //test for already exist
+        
+        if ( !this.outputRegexQueue.hasOwnProperty(tag) ) {
+
+            debug(`appended new regex tag for trigger regex: ${tag} : ${regex}`);
+            this.outputRegexQueue[tag] = { 
+                'call': cb,
+                'reg': regex
+            };
+
+        }
 
     }
 
     /**
-     * Passes commands to the internal server instance
+     * Passes commands to the internal server instance,
+     * returns promise, resolves true if successful parse else error if fail
      * Has a special 
-     * @param {String} commandArgument 
+     * @param {String} commandArgument argument string to pass, terminated with newline if not already present
      */
     passCommand( commandArgument ) {
-        
-        
+
+        //input sanity checking
+        //and debug
+        debug(`instance: ${this.confID} command: ${commandArgument}`);
+
+        return new Promise( ( resolve, reject ) => {
+            
+            if (this.serverProcess.stdin.write( `${commandArgument}\n`, ( err ) => {
+                if ( err ) {
+                    //we got an error.
+                    reject(err); 
+                }
+            })) {
+                //we passed the command.
+                resolve(true);
+            }
+            
+        });
 
     }
 
@@ -116,16 +170,57 @@ class ServerInstance {
 
 //Initialization segment
 
-debug(`Server Manager Initializing\nconfig read from ${confLocation}\nInitializing sub-modules`);
+debug('Server Manager Initializing\nconfig read from config.json\nInitializing sub-modules');
 
 //initialize discord connection
-const discordInstance = new discordFrontEnd.discordFrontEnd(confLocation, config);
+const discordInstance = new discordFrontEnd.discordFrontEnd(config);
 //initialize local hardware tie-in
-const hardwareInstance = new hardwareMonitor.hardwareMonitor(confLocation, config);
+const hardwareInstance = new hardwareMonitor.hardwareMonitor(config);
 //initialize local queue of server instances
 const instanceQueue = [];
 
 
 
+//build instances
+const arr = config.serverManager.instances;
+for ( var key in arr ) {
+    if ( arr.hasOwnProperty(key) ) {
+        debug(`Booting ${arr[key].instance}`);
+        instanceQueue.push(new ServerInstance( config.serverManager.instances[key]));
+    }
+}
+
+//boot instances
+for ( var i in instanceQueue ) {
+    instanceQueue[i].init( true, 1 );
+}
+
+instanceQueue[0].passCommand( '/help' )
+    .then( (val) => {
+        debug(`test ${val}`);
+    })
+    .catch( (reason) => {
+        debug(`error ${reason}`);
+    });
+
+const reg = /Done \((\d+?[.]\d+?)s\)!/g;
+
+instanceQueue[0].registerOutputChannel( 'test', reg, ( data ) => {
+    debug(`[${instanceQueue[0].cfg.instance}] booted in ${data[0]}s`);    
+});
 
 
+let statePingPong = function( inst ) {
+
+    debug(`${inst.serverProcess.pid}`);
+    
+};
+
+setTimeout( () => {
+    instanceQueue[0].gracefulTerminate();
+   
+}, 40000); 
+
+setInterval( () => {
+    statePingPong( instanceQueue[0] );
+}, 4000 );
