@@ -1,7 +1,6 @@
 const systInfo = require('systeminformation');
 const emitter = require('events').EventEmitter;
 const debug = require('debug')('hardwareMonitor');
-const ConfigParser = require('configparser');
 const os = require('os');
 /**
  * Bundle of methods for polling temps etc
@@ -16,14 +15,14 @@ class hardwareMonitor {
     constructor ( config) {
         //store the config file location
         this.cfg = config;
-        
-
         this.hostname = os.hostname();
        
         debug(`Initializing hardware polling module for host ${this.hostname}`);
 
+    }
 
-        
+    init() {
+        //set up emitter, peg levels, get state check loop started
     }
 
 }

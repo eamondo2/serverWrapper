@@ -1,5 +1,5 @@
 // external modules
-const rcon = require('rcon');
+//const rcon = require('rcon');
 const debug = require('debug')('serverManager');
 const cProc = require('child_process');
 const config = require('./config.json');
@@ -25,6 +25,7 @@ class ServerInstance {
         this.cfg = cfg;
         this.confID = this.cfg.instance;
         this.autoRespawn = this.cfg.autoRespawn;
+        this.dbg = function ( msg ) { debug(`[${this.confID}]: ${msg}`);};
     }
 
     /**
@@ -36,7 +37,9 @@ class ServerInstance {
         this.debugLevel = logLevel;
         this.respawnIfDead = respawnIfDead;
 
-        debug(`${this.confID} Initializing server`);
+        //this.lastBoot = Date.getTime();
+
+        this.dbg('Initializing server');
 
         // spawn new instance
         const pth = path.resolve(__dirname, `${this.cfg.serverDir}`, `${this.cfg.instanceLocation}`);
@@ -59,7 +62,7 @@ class ServerInstance {
         this.serverProcess.on('exit', (code, signal) => {
             // if we've exited, make sure we want to
             // if not, then queue for re-initialization
-            debug(`[${this.confID}] TERMINATED with signal ${signal}:${code}`);
+            this.dbg(`TERMINATED with signal ${signal}:${code}`);
             if (!this.terminating && this.respawnIfDead) {
                 // we want to come back, so do the thing
                 setTimeout(() => this.init(true, this.debugLevel), 20000);
@@ -67,7 +70,10 @@ class ServerInstance {
         });
 
         this.serverProcess.on('error', (err) => {
-            debug(`[${this.confID}]  error: ${err}`);
+            this.dbg(`error: ${err}`);
+            //terminate? 
+            //determine if running
+
         });
     }
 
@@ -91,7 +97,7 @@ class ServerInstance {
         // else we don't care, no messages are filtered for output
         // unless debug print all
         if (this.debugLevel === 2) {
-            debug(`${this.confID}: ${data}`);
+            this.dbg(`${data}`);
         }
     }
 
@@ -101,7 +107,7 @@ class ServerInstance {
      */
     errorParse (data) {
     // for each of the internal error regex items, check against and pass if needed
-        debug(`Error from ${this.confID}: ${data}`);
+        this.dbg(`Error from ${this.confID}: ${data}`);
     }
 
     /**
@@ -111,7 +117,7 @@ class ServerInstance {
     gracefulTerminate () {
         this.terminating = true;
         this.passCommand('/stop');
-        debug(`[${this.confID}] Shutting down..`);
+        this.dbg('Shutting down..');
     }
 
     /**
@@ -125,7 +131,7 @@ class ServerInstance {
     // test for already exist
 
         if (!this.outputRegexQueue.hasOwnProperty(tag)) {
-            debug(`appended new regex tag for trigger regex: ${tag} : ${regex}`);
+            this.dbg(`appended new regex trigger: ${tag} for: ${regex}`);
             this.outputRegexQueue[tag] = {
                 'call': cb,
                 'reg': regex
@@ -142,7 +148,7 @@ class ServerInstance {
     passCommand (commandArgument) {
     // input sanity checking
     // and debug
-        debug(`instance: ${this.confID} command: ${commandArgument}`);
+        this.dbg(`command: ${commandArgument}`);
 
         return new Promise((resolve, reject) => {
             if (this.serverProcess.stdin.write(`${commandArgument}\n`, (err) => {
@@ -167,48 +173,54 @@ const discordInstance = new discordFrontEnd.discordFrontEnd(config.client);
 // initialize local hardware tie-in
 const hardwareInstance = new hardwareMonitor.hardwareMonitor(config.hardware);
 // initialize local queue of server instances
-const instanceQueue = [];
+const instanceQueue = {};
+
+//start discord
+discordInstance.init();
+
+//start hardware monitor
+hardwareInstance.init();
 
 // build instances
 const arr = config.serverManager.instances;
-for (var key in arr) {
-    if (arr.hasOwnProperty(key)) {
-        debug(`Booting ${arr[key].instance}`);
-        instanceQueue.push(new ServerInstance(config.serverManager.instances[key]));
+for (let item in arr) {
+    if (arr.hasOwnProperty(item)) {
+        debug(`Booting ${arr[item].instance}`);
+        instanceQueue[arr[item].instance] = new ServerInstance(config.serverManager.instances[item]);
+        
     }
 }
 
 // boot instances
-for (var i in instanceQueue) {
-    instanceQueue[i].init(true, 1);
+for (let key in instanceQueue) {
+    if (instanceQueue[key].autoRespawn) instanceQueue[key].init(true, 1);
 }
 
-discordInstance.init();
-
-instanceQueue[0].passCommand('/help')
-    .then((val) => {
-        debug(`test ${val}`);
-    })
-    .catch((reason) => {
-        debug(`error ${reason}`);
-    });
-
+//debug message hooking
 let reg = /Done \((\d+?[.]\d+?)s\)!/;
 
-instanceQueue[0].registerOutputChannel('test', reg, (data) => {
+instanceQueue['dire20'].registerOutputChannel('test', reg, (data) => {
     let t = reg.exec(data);
-    debug(`[${instanceQueue[0].cfg.instance}] booted in ${t[1]}s`);
-    discordInstance.hookOutputStream( `[${instanceQueue[0].cfg.instance}] booted in ${t[1]}s` );
+    debug(`[${instanceQueue['dire20'].cfg.instance}] booted in ${t[1]}s`);
+    discordInstance.hookOutputStream( `[${instanceQueue['dire20'].cfg.instance}] booted in ${t[1]}s` );
 });
 
-let statePingPong = function (inst) {
-    debug(`${inst.serverProcess.pid}`);
-};
+instanceQueue['dire20'].registerOutputChannel('all', /.+/, (data) => {
+    discordInstance.hookOutputStream( data );
+});
 
-setTimeout(() => {
-    instanceQueue[0].gracefulTerminate();
-}, 40000);
+let dynReg = /[@](\S+)[ ]*?[!](\S+)[ ]*?[\/](.+)/;
+discordInstance.registerInputQueue( 'servMatch',  dynReg, ( data, self ) => {
+    let matches = dynReg.exec( data.cleanContent );
+    if ( matches.length > 3 ) {
+        //we've got a valid one
+        if ( instanceQueue.hasOwnProperty(matches[2])) {
+            let inst = instanceQueue[matches[2]];
+            inst.passCommand( matches[3] )
+                .then(inst.dbg('cmdPass'))
+                .catch ( err => inst.dbg(err));
+        }
+    }
+});
 
-setInterval(() => {
-    statePingPong(instanceQueue[0]);
-}, 4000);
+

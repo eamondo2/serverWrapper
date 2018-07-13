@@ -1,0 +1,12 @@
+{
+    "instance" : "",
+    "autoRespawn" : false,
+    "serverDir" : "",
+    "instanceLocation" : "",
+    "instanceExec" : "",
+    "rconEnable" : false,
+    "rconPort" : "",
+    "rconPass" : "",
+    "rconAddress" : "",
+    "logLevel" : 1
+}

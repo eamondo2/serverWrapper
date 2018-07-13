@@ -29,3 +29,12 @@ the initialize function has to hook the global event queue, for dispatch to disc
 
 each instance gets rcon info
 
+keepalive
+team management
+    channel create, perm manage
+arg parse
+server spool
+hardware info
+uptime
+critical error log
+allow for create server
