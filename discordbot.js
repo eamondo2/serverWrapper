@@ -25,25 +25,44 @@ class discordFrontEnd {
    * starts the bot
    * @param {String} channelID id of channel to sit in
    */
-    init (channelID = this.channelID) {
-        this.discordClient.login(this.cfg.clientToken);
-        this.channelID = channelID;
+    init(channelID = this.channelID) {
+       
+        return new Promise((resolve, reject) => {
+            
+            this.discordClient.login(this.cfg.clientToken)
+                .then( (resolve) => null )
+                .catch( reason => {
+                    this.dbg('err');
+                    reject( reason );
+                });
+            this.channelID = channelID;
+            //boot hooking
+            this.discordClient.on('ready', () => {
+                this.clientName = this.discordClient.user.username;
+                this.channel = this.discordClient.channels.get(this.cfg.bot.channel);
+                this.discordClient.user.setActivity('Active and managing servers');
+                this.dbg('Discord ready');
+                //input hooking
+                this.discordClient.on('message', message => this.messageHandle(message, this));
+                resolve(true);
 
-        //boot hooking
-        this.discordClient.on('ready', () => {
-            this.clientName = this.discordClient.user.username;
-            this.discordClient.user.setActivity( 'Active and managing servers' );
+            });
+               
+
+
         });
 
-        //input hooking
-        this.discordClient.on('message', async message => this.messageHandle( message, this ) );
 
 
 
     }
 
-    hookOutputStream( data, destination = this.channelID ) {
-        this.discordClient.channels.get(destination).send( data );
+    hookOutputStream(data, destination = this.channelID ) {
+        if ( ! this.channelID ) this.channelID = this.cfg.bot.channel;
+        this.channel.send( data )
+            .then( result => this.dbg(`sent message ${data} ${result}`) )
+            .catch( err =>  this.dbg(`err send message ${data} ${err}`) );
+           
     }
 
     /**

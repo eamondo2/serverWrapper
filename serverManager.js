@@ -175,11 +175,6 @@ const hardwareInstance = new hardwareMonitor.hardwareMonitor(config.hardware);
 // initialize local queue of server instances
 const instanceQueue = {};
 
-//start discord
-discordInstance.init();
-
-//start hardware monitor
-hardwareInstance.init();
 
 // build instances
 const arr = config.serverManager.instances;
@@ -191,36 +186,56 @@ for (let item in arr) {
     }
 }
 
+//start discord
+discordInstance.init()
+    .then((fulfill, reject) => {
+        if ( reject ) {
+            debug(`Discord failed to init: ${reject}`);
+            process.exit();
+        }
+        else if ( fulfill ) {
+
+            //async wait for discord bot init
+            //debug message hooking
+            let reg = /Done \((\d+?[.]\d+?)s\)!/;
+
+            instanceQueue['dire20'].registerOutputChannel('test', reg, (data) => {
+                let t = reg.exec(data);
+                debug(`[${instanceQueue['dire20'].cfg.instance}] booted in ${t[1]}s`);
+                discordInstance.hookOutputStream(`[${instanceQueue['dire20'].cfg.instance}] booted in ${t[1]}s`);
+            });
+
+            instanceQueue['dire20'].registerOutputChannel('all', /.+/, (data) => {
+                discordInstance.hookOutputStream(data.toString());
+            });
+
+            let dynReg = /[@](\S+)[ ]*?[!](\S+)[ ]*?[\/](.+)/;
+            discordInstance.registerInputQueue('servMatch', dynReg, (data, self) => {
+                let matches = dynReg.exec(data.cleanContent);
+                if (matches.length > 3) {
+                    //we've got a valid one
+                    if (instanceQueue.hasOwnProperty(matches[2])) {
+                        let inst = instanceQueue[matches[2]];
+                        inst.passCommand(matches[3])
+                            .then(inst.dbg('cmdPass'))
+                            .catch(err => inst.dbg(err));
+                    }
+                }
+            });
+        }
+
+    });
+
+//start hardware monitor
+hardwareInstance.init()
+    .then( ( fulfill, reject ) => {
+
+    });
+
 // boot instances
 for (let key in instanceQueue) {
     if (instanceQueue[key].autoRespawn) instanceQueue[key].init(true, 1);
 }
 
-//debug message hooking
-let reg = /Done \((\d+?[.]\d+?)s\)!/;
-
-instanceQueue['dire20'].registerOutputChannel('test', reg, (data) => {
-    let t = reg.exec(data);
-    debug(`[${instanceQueue['dire20'].cfg.instance}] booted in ${t[1]}s`);
-    discordInstance.hookOutputStream( `[${instanceQueue['dire20'].cfg.instance}] booted in ${t[1]}s` );
-});
-
-instanceQueue['dire20'].registerOutputChannel('all', /.+/, (data) => {
-    discordInstance.hookOutputStream( data );
-});
-
-let dynReg = /[@](\S+)[ ]*?[!](\S+)[ ]*?[\/](.+)/;
-discordInstance.registerInputQueue( 'servMatch',  dynReg, ( data, self ) => {
-    let matches = dynReg.exec( data.cleanContent );
-    if ( matches.length > 3 ) {
-        //we've got a valid one
-        if ( instanceQueue.hasOwnProperty(matches[2])) {
-            let inst = instanceQueue[matches[2]];
-            inst.passCommand( matches[3] )
-                .then(inst.dbg('cmdPass'))
-                .catch ( err => inst.dbg(err));
-        }
-    }
-});
 
 
