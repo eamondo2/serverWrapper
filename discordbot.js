@@ -43,22 +43,18 @@ class discordFrontEnd {
                 this.discordClient.user.setActivity('Active and managing servers');
                 this.dbg('Discord ready');
                 //input hooking
-                this.discordClient.on('message', message => this.messageHandle(message, this));
+                this.discordClient.on('message', message => this.messageHandle(message));
                 resolve(true);
 
             });
                
-
-
         });
-
-
-
 
     }
 
-    hookOutputStream(data, destination = this.channelID ) {
+    passOutput(data, destination = this.channelID ) {
         if ( ! this.channelID ) this.channelID = this.cfg.bot.channel;
+        if ( !this.channel ) this.channel = this.discordClient.channels.get(destination);
         this.channel.send( data )
             .then( result => this.dbg(`sent message ${data} ${result}`) )
             .catch( err =>  this.dbg(`err send message ${data} ${err}`) );
@@ -86,7 +82,7 @@ class discordFrontEnd {
      * @param {Discord.Message} data discord bot message event
      * @param {discordFrontEnd} self the discord class instance 
      */
-    messageHandle( data, self ) {
+    messageHandle( data ) {
         //invalidate bot messages
         if ( data.author.bot ) return;
         //invalidate non mentions
@@ -99,11 +95,11 @@ class discordFrontEnd {
             for (let tag in this.inputHookQueue) {
                 if (this.inputHookQueue.hasOwnProperty(tag)) {
                     let tmp = this.inputHookQueue[tag];
-                    let t = tmp.reg.exec( data.cleanContent );
+                    
                     if (tmp.reg.exec(data.cleanContent) !== null) {
                         //pass the message and the current instance for exec outside of scope
                         //make sure we don't talk to a bot
-                        tmp.call ( data, self );
+                        tmp.call ( data );
                     }
                 }
             }

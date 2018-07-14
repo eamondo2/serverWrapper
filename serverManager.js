@@ -5,6 +5,7 @@ const cProc = require('child_process');
 const config = require('./config.json');
 const Promise = require('promise');
 const path = require('path');
+const Discord = require('discord.js');
 // local modules
 const hardwareMonitor = require('./hardwareMonitor.js');
 const discordFrontEnd = require('./discordbot.js');
@@ -175,8 +176,9 @@ const hardwareInstance = new hardwareMonitor.hardwareMonitor(config.hardware);
 // initialize local queue of server instances
 const instanceQueue = {};
 
-
-// build instances
+//====================================
+// build instances from local config
+//====================================
 const arr = config.serverManager.instances;
 for (let item in arr) {
     if (arr.hasOwnProperty(item)) {
@@ -186,7 +188,9 @@ for (let item in arr) {
     }
 }
 
+//=========================
 //start discord
+//=========================
 discordInstance.init()
     .then((fulfill, reject) => {
         if ( reject ) {
@@ -202,15 +206,14 @@ discordInstance.init()
             instanceQueue['dire20'].registerOutputChannel('test', reg, (data) => {
                 let t = reg.exec(data);
                 debug(`[${instanceQueue['dire20'].cfg.instance}] booted in ${t[1]}s`);
-                discordInstance.hookOutputStream(`[${instanceQueue['dire20'].cfg.instance}] booted in ${t[1]}s`);
+                discordInstance.passOutput(`[${instanceQueue['dire20'].cfg.instance}] booted in ${t[1]}s`);
             });
 
-            instanceQueue['dire20'].registerOutputChannel('all', /.+/, (data) => {
-                discordInstance.hookOutputStream(data.toString());
-            });
+           
 
             let dynReg = /[@](\S+)[ ]*?[!](\S+)[ ]*?[\/](.+)/;
-            discordInstance.registerInputQueue('servMatch', dynReg, (data, self) => {
+            discordInstance.registerInputQueue('servMatch', dynReg, (data) => {
+                //permission check insert here
                 let matches = dynReg.exec(data.cleanContent);
                 if (matches.length > 3) {
                     //we've got a valid one
@@ -225,12 +228,16 @@ discordInstance.init()
         }
 
     });
-
+//========================
 //start hardware monitor
+//========================
 hardwareInstance.init()
     .then( ( fulfill, reject ) => {
 
     });
+
+
+
 
 // boot instances
 for (let key in instanceQueue) {
