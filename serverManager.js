@@ -5,7 +5,6 @@ const cProc = require('child_process');
 const config = require('./config.json');
 const Promise = require('promise');
 const path = require('path');
-const Discord = require('discord.js');
 // local modules
 const hardwareMonitor = require('./hardwareMonitor.js');
 const discordFrontEnd = require('./discordbot.js');
@@ -19,14 +18,17 @@ class ServerInstance {
      * constructor
      * @param {config} cfg config file snippet, contains this instance's info
      */
-    constructor (cfg) {
-    // handle list of regex parses for message queue
+    constructor(cfg) {
+        // handle list of regex parses for message queue
         this.outputRegexQueue = {};
 
         this.cfg = cfg;
         this.confID = this.cfg.instance;
         this.autoRespawn = this.cfg.autoRespawn;
-        this.dbg = function ( msg ) { debug(`[${this.confID}]: ${msg}`);};
+        this.debugLevel = this.cfg.debugLevel;
+        this.dbg = function (msg) {
+            debug(`[${this.confID}]: ${msg}`);
+        };
     }
 
     /**
@@ -34,7 +36,7 @@ class ServerInstance {
      * @param {boolean} respawnIfDead
      * @param {Number} logLevel 0, quiet, 1, print error, 2, print all
      */
-    init (respawnIfDead = this.autoRespawn, logLevel) {
+    init(respawnIfDead = this.autoRespawn, logLevel) {
         this.debugLevel = logLevel;
         this.respawnIfDead = respawnIfDead;
 
@@ -48,8 +50,9 @@ class ServerInstance {
             `${this.cfg.instanceExec}`, [
                 '/c',
                 pth
-            ],
-            {'cwd': path.resolve(__dirname, `${this.cfg.serverDir}`)}
+            ], {
+                'cwd': path.resolve(__dirname, `${this.cfg.serverDir}`)
+            }
         );
 
         // hook listeners and state monitor for instance
@@ -82,15 +85,15 @@ class ServerInstance {
      * This function catches the incoming server output
      * @param {String} data incoming data from server instance
      */
-    messageParse (data) {
-    // check for exist regex
+    messageParse(data) {
+        // check for exist regex
         if (this.outputRegexQueue !== null && this.outputRegexQueue.length !== 0) {
             // for each of the internal regex items, check against and pass if needed
             for (let tag in this.outputRegexQueue) {
                 if (this.outputRegexQueue.hasOwnProperty(tag)) {
                     let tmp = this.outputRegexQueue[tag];
                     if (tmp.reg.exec(data) !== null) {
-                        tmp.call ( data );
+                        tmp.call(data);
                     }
                 }
             }
@@ -106,8 +109,8 @@ class ServerInstance {
      * This function catches incoming server stderr
      * @param {String} data incoming error message from server instance
      */
-    errorParse (data) {
-    // for each of the internal error regex items, check against and pass if needed
+    errorParse(data) {
+        // for each of the internal error regex items, check against and pass if needed
         this.dbg(`Error from ${this.confID}: ${data}`);
     }
 
@@ -115,7 +118,7 @@ class ServerInstance {
      * Tells the held server instance to terminate with some semblance of grace.
      * Sets the internal state to terminating, effectively represents the stop command
      */
-    gracefulTerminate () {
+    gracefulTerminate() {
         this.terminating = true;
         this.passCommand('/stop');
         this.dbg('Shutting down..');
@@ -128,8 +131,8 @@ class ServerInstance {
      * @param {RegExp} regex allows for passing triggers with specific regex catch?
      * @param {function} cb callback for execution on regex match
      */
-    registerOutputChannel (tag, regex, cb) {
-    // test for already exist
+    registerOutputChannel(tag, regex, cb) {
+        // test for already exist
 
         if (!this.outputRegexQueue.hasOwnProperty(tag)) {
             this.dbg(`appended new regex trigger: ${tag} for: ${regex}`);
@@ -146,9 +149,9 @@ class ServerInstance {
      * Has a special
      * @param {String} commandArgument argument string to pass, terminated with newline if not already present
      */
-    passCommand (commandArgument) {
-    // input sanity checking
-    // and debug
+    passCommand(commandArgument) {
+        // input sanity checking
+        // and debug
         this.dbg(`command: ${commandArgument}`);
 
         return new Promise((resolve, reject) => {
@@ -180,11 +183,12 @@ const instanceQueue = {};
 // build instances from local config
 //====================================
 const arr = config.serverManager.instances;
+
 for (let item in arr) {
     if (arr.hasOwnProperty(item)) {
         debug(`Booting ${arr[item].instance}`);
         instanceQueue[arr[item].instance] = new ServerInstance(config.serverManager.instances[item]);
-        
+
     }
 }
 
@@ -193,23 +197,26 @@ for (let item in arr) {
 //=========================
 discordInstance.init()
     .then((fulfill, reject) => {
-        if ( reject ) {
+        if (reject) {
             debug(`Discord failed to init: ${reject}`);
             process.exit();
-        }
-        else if ( fulfill ) {
+        } else if (fulfill) {
 
             //async wait for discord bot init
             //debug message hooking
             let reg = /Done \((\d+?[.]\d+?)s\)!/;
 
-            instanceQueue['dire20'].registerOutputChannel('test', reg, (data) => {
-                let t = reg.exec(data);
-                debug(`[${instanceQueue['dire20'].cfg.instance}] booted in ${t[1]}s`);
-                discordInstance.passOutput(`[${instanceQueue['dire20'].cfg.instance}] booted in ${t[1]}s`);
-            });
+            for (let item in arr){
+                if (arr.hasOwnProperty(item)){
+                    instanceQueue[arr[item].instance].registerOutputChannel('test', reg, (data) => {
+                        let t = reg.exec(data);
+                        debug(`[${instanceQueue['FTBUltimate'].cfg.instance}] booted in ${t[1]}s`);
+                        discordInstance.passOutput(`[${instanceQueue['FTBUltimate'].cfg.instance}] booted in ${t[1]}s`);
+                    });
+                }
+            }
 
-           
+            
 
             let dynReg = /[@](\S+)[ ]*?[!](\S+)[ ]*?[\/](.+)/;
             discordInstance.registerInputQueue('servMatch', dynReg, (data) => {
@@ -232,7 +239,7 @@ discordInstance.init()
 //start hardware monitor
 //========================
 hardwareInstance.init()
-    .then( ( fulfill, reject ) => {
+    .then((fulfill, reject) => {
 
     });
 
@@ -241,8 +248,6 @@ hardwareInstance.init()
 
 // boot instances
 for (let key in instanceQueue) {
-    if (instanceQueue[key].autoRespawn) instanceQueue[key].init(true, 1);
+    if (instanceQueue[key].autoRespawn) instanceQueue[key].init(true, instanceQueue[key].debugLevel);
 }
-
-
 

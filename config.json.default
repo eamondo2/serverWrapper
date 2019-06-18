@@ -4,7 +4,7 @@
         "clientToken" : "",
         "clientName" : "mcServStatus",
         "bot" : {
-            "prefix" : "",
+            "prefix" : "Bot",
             "channel" : ""
         }
     }, 
@@ -14,16 +14,18 @@
         "threadLoadLockTimeMax" : 300000
     }, 
     "serverManager" : {
-        "instances" : [
-            "default"
-        ], 
-        "default" : {
-            "instanceLocation" : "",
-            "instanceExec" : "",
-            "rconEnable" : ,
-            "rconPort" : "",
-            "rconPass" : "",
-            "rconAddress" : ""
+        "instances" : {
+            "test" : {
+                "serverDir" : "testDir",
+                "instance" : "test",
+                "autoRespawn" : true,
+                "instanceLocation" : "",
+                "instanceExec" : "testStart.bat",
+                "rconEnable" : true,
+                "rconPort" : "",
+                "rconPass" : "",
+                "rconAddress" : ""
+            }
         }
     }
 
