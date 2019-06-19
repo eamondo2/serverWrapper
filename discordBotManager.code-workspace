@@ -2,6 +2,9 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "/mnt/2ndssd/ServerInstances/FTBUltimate"
 		}
 	],
 	"settings": {}
