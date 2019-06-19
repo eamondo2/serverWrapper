@@ -5,7 +5,8 @@
   "main": "serverManager.js",
   "scripts": {
     "start": "node serverManager.js",
-    "test": "cross-env DEBUG=* node serverManager.js"
+    "test": "cross-env DEBUG=* node serverManager.js",
+    "debug": "cross-env DEBUG=* node --inspect=localhost:9229 serverManager.js"
   },
   "repository": {
     "type": "git",

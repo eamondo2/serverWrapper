@@ -5,6 +5,18 @@ const cProc = require('child_process');
 const config = require('./config.json');
 const Promise = require('promise');
 const path = require('path');
+
+//prelim cross-compatibility measures
+const platform = require('os'),
+    osType = platform;
+
+let command;
+if (osType == 'win32')
+    command = 'cmd.exe';
+else
+    command = 'bash';
+
+
 // local modules
 const hardwareMonitor = require('./hardwareMonitor.js');
 const discordFrontEnd = require('./discordbot.js');
@@ -46,14 +58,26 @@ class ServerInstance {
 
         // spawn new instance
         const pth = path.resolve(__dirname, `${this.cfg.serverDir}`, `${this.cfg.instanceLocation}`);
+
+    
         this.serverProcess = cProc.spawn(
-            `${this.cfg.instanceExec}`, [
-                '/c',
-                pth
-            ], {
-                'cwd': path.resolve(__dirname, `${this.cfg.serverDir}`)
+            command, 
+            [
+                `${pth}/${this.cfg.instanceExec}`                
+            ], 
+            {
+                'cwd': path.resolve(__dirname, `${this.cfg.serverDir}/${this.cfg.instanceLocation}`)
             }
         );
+
+        // this.serverProcess = cProc.spawn(
+        //     `${this.cfg.instanceExec}`, [
+        //         '/c',
+        //         pth
+        //     ], {
+        //         'cwd': path.resolve(__dirname, `${this.cfg.serverDir}`)
+        //     }
+        // );
 
         // hook listeners and state monitor for instance
 
@@ -172,6 +196,7 @@ class ServerInstance {
 
 debug('Server Manager Initializing\nconfig read from config.json\nInitializing sub-modules');
 
+
 // initialize discord connection
 const discordInstance = new discordFrontEnd.discordFrontEnd(config.client);
 // initialize local hardware tie-in
@@ -206,8 +231,8 @@ discordInstance.init()
             //debug message hooking
             let reg = /Done \((\d+?[.]\d+?)s\)!/;
 
-            for (let item in arr){
-                if (arr.hasOwnProperty(item)){
+            for (let item in arr) {
+                if (arr.hasOwnProperty(item)) {
                     instanceQueue[arr[item].instance].registerOutputChannel('test', reg, (data) => {
                         let t = reg.exec(data);
                         debug(`[${instanceQueue['FTBUltimate'].cfg.instance}] booted in ${t[1]}s`);
@@ -216,7 +241,7 @@ discordInstance.init()
                 }
             }
 
-            
+
 
             let dynReg = /[@](\S+)[ ]*?[!](\S+)[ ]*?[\/](.+)/;
             discordInstance.registerInputQueue('servMatch', dynReg, (data) => {
@@ -250,4 +275,3 @@ hardwareInstance.init()
 for (let key in instanceQueue) {
     if (instanceQueue[key].autoRespawn) instanceQueue[key].init(true, instanceQueue[key].debugLevel);
 }
-
