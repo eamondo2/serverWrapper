@@ -31,6 +31,7 @@ class ServerInstance {
      * @param {config} cfg config file snippet, contains this instance's info
      */
     constructor(cfg) {
+
         // handle list of regex parses for message queue
         this.outputRegexQueue = {};
 
@@ -58,26 +59,14 @@ class ServerInstance {
 
         // spawn new instance
         const pth = path.resolve(__dirname, `${this.cfg.serverDir}`, `${this.cfg.instanceLocation}`);
-
-    
         this.serverProcess = cProc.spawn(
-            command, 
+            command,
             [
-                `${pth}/${this.cfg.instanceExec}`                
-            ], 
-            {
+                `${pth}/${this.cfg.instanceExec}`
+            ], {
                 'cwd': path.resolve(__dirname, `${this.cfg.serverDir}/${this.cfg.instanceLocation}`)
             }
         );
-
-        // this.serverProcess = cProc.spawn(
-        //     `${this.cfg.instanceExec}`, [
-        //         '/c',
-        //         pth
-        //     ], {
-        //         'cwd': path.resolve(__dirname, `${this.cfg.serverDir}`)
-        //     }
-        // );
 
         // hook listeners and state monitor for instance
 
@@ -178,6 +167,10 @@ class ServerInstance {
         // and debug
         this.dbg(`command: ${commandArgument}`);
 
+        //check for specific index of key commands to toggle state
+        //how to manage something like this
+
+
         return new Promise((resolve, reject) => {
             if (this.serverProcess.stdin.write(`${commandArgument}\n`, (err) => {
                 if (err) {
@@ -190,9 +183,16 @@ class ServerInstance {
             }
         });
     }
+
+
 }
 
+//Method for handling batch regexp hook loading per instance
+
+
+//===========================
 // Initialization segment
+//===========================
 
 debug('Server Manager Initializing\nconfig read from config.json\nInitializing sub-modules');
 
@@ -203,6 +203,7 @@ const discordInstance = new discordFrontEnd.discordFrontEnd(config.client);
 const hardwareInstance = new hardwareMonitor.hardwareMonitor(config.hardware);
 // initialize local queue of server instances
 const instanceQueue = {};
+
 
 //====================================
 // build instances from local config
@@ -216,6 +217,7 @@ for (let item in arr) {
 
     }
 }
+
 
 //=========================
 //start discord
@@ -235,18 +237,23 @@ discordInstance.init()
                 if (arr.hasOwnProperty(item)) {
                     instanceQueue[arr[item].instance].registerOutputChannel('test', reg, (data) => {
                         let t = reg.exec(data);
-                        debug(`[${instanceQueue['FTBUltimate'].cfg.instance}] booted in ${t[1]}s`);
-                        discordInstance.passOutput(`[${instanceQueue['FTBUltimate'].cfg.instance}] booted in ${t[1]}s`);
+                        debug(`[${instanceQueue[`${item}`].cfg.instance}] booted in ${t[1]}s`);
+                        discordInstance.passOutput(`[${instanceQueue[`${item}`].cfg.instance}] booted in ${t[1]}s`);
                     });
                 }
             }
 
 
-
+            //Global server specific command passing
             let dynReg = /[@](\S+)[ ]*?[!](\S+)[ ]*?[\/](.+)/;
             discordInstance.registerInputQueue('servMatch', dynReg, (data) => {
+
                 //permission check insert here
+                //need to work on implementing team based permissionds and such
+                //TODO: Implement permissions/grouping
+
                 let matches = dynReg.exec(data.cleanContent);
+
                 if (matches.length > 3) {
                     //we've got a valid one
                     if (instanceQueue.hasOwnProperty(matches[2])) {
@@ -260,18 +267,21 @@ discordInstance.init()
         }
 
     });
+
+
 //========================
-//start hardware monitor
+//Start hardware monitor
 //========================
 hardwareInstance.init()
-    .then((fulfill, reject) => {
+    .then((resolve, reject) => {
 
     });
 
 
 
-
-// boot instances
+//===============
+// Boot instances
+//===============
 for (let key in instanceQueue) {
     if (instanceQueue[key].autoRespawn) instanceQueue[key].init(true, instanceQueue[key].debugLevel);
 }

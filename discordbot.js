@@ -32,7 +32,7 @@ class discordFrontEnd {
         return new Promise((resolve, reject) => {
 
             this.discordClient.login(this.cfg.clientToken)
-                .then((resolve) => null)
+                // .then((resolve) => null)
                 .catch(reason => {
                     this.dbg('err');
                     reject(reason);
@@ -91,8 +91,10 @@ class discordFrontEnd {
         let t = /[@](\S+)/.exec(data.cleanContent);
         if (t === null) return;
         if (t[1] !== this.clientName) return;
+
         // check for exist regex
         if (this.inputHookQueue !== null && this.inputHookQueue.length !== 0) {
+
             // for each of the internal regex items, check against and pass if needed
             for (let tag in this.inputHookQueue) {
                 if (this.inputHookQueue.hasOwnProperty(tag)) {
@@ -106,6 +108,7 @@ class discordFrontEnd {
                 }
             }
         }
+
         // else we don't care, no messages are filtered for output
         // unless debug print all
         if (this.debugLevel === 2) {
