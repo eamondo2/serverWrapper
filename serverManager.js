@@ -5,6 +5,7 @@ const cProc = require('child_process');
 const config = require('./config.json');
 const Promise = require('promise');
 const path = require('path');
+const rcon = require('rcon');
 
 //prelim cross-compatibility measures
 const platform = require('os'),
@@ -39,6 +40,10 @@ class ServerInstance {
         this.confID = this.cfg.instance;
         this.autoRespawn = this.cfg.autoRespawn;
         this.debugLevel = this.cfg.debugLevel;
+
+        //handle Rcon
+        this.rconEnable = this.cfg.rconEnable;
+       
         this.dbg = function (msg) {
             debug(`[${this.confID}]: ${msg}`);
         };

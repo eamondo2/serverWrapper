@@ -114,6 +114,7 @@ class discordFrontEnd {
         if (this.debugLevel === 2) {
             this.dbg(`${data}`);
         }
+
     }
 
 }
