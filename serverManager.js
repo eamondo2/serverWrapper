@@ -19,8 +19,9 @@ else
 
 
 // local modules
-const hardwareMonitor = require('./hardwareMonitor.js');
-const discordFrontEnd = require('./discordbot.js');
+const hardwareMonitor = require('./modules/hardwareMonitor.js/index.js');
+const discordFrontEnd = require('./modules/discordbot.js/index.js');
+const regexHooker = require('./modules/regexHooker.js/index.js');
 
 /**
  * managed server instance

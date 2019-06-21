@@ -10,7 +10,8 @@ class regexHooker {
         this.cfg = config;
         
 
-        debug(`Initializing RegExp hooker for `)
+        debug('Initializing RegExp hooker');
+        
     }
 
 }
