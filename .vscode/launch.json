@@ -14,7 +14,7 @@
                 "DEBUG" : "*"
             },
             "name": "servManagerTest",
-            "program": "${workspaceFolder}/serverManager.js"
+            "program": "${workspaceFolder}/main.js"
         }
     ]
 }

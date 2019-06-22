@@ -24,7 +24,7 @@ class hardwareMonitor {
     init() {
         //set up emitter, peg levels, get state check loop started
         return new Promise( ( resolve, reject ) => {
-            
+            //todo
         });
     }
     

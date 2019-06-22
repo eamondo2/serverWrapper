@@ -2,7 +2,6 @@
 //const rcon = require('rcon');
 const debug = require('debug')('serverManager');
 const cProc = require('child_process');
-const config = require('./config.json');
 const Promise = require('promise');
 const path = require('path');
 const rcon = require('rcon');
@@ -18,10 +17,6 @@ else
     command = 'bash';
 
 
-// local modules
-const hardwareMonitor = require('./modules/hardwareMonitor.js/index.js');
-const discordFrontEnd = require('./modules/discordbot.js/index.js');
-const regexHooker = require('./modules/regexHooker.js/index.js');
 
 /**
  * managed server instance
@@ -37,9 +32,13 @@ class ServerInstance {
         // handle list of regex parses for message queue
         this.outputRegexQueue = {};
 
+        //check with master Regex list for adding hook list here, load from after and append to discord instance
+
         this.cfg = cfg;
         this.confID = this.cfg.instance;
         this.autoRespawn = this.cfg.autoRespawn;
+        this.autoBoot = this.cfg.autoBoot;
+
         this.debugLevel = this.cfg.debugLevel;
 
         //handle Rcon
@@ -48,6 +47,18 @@ class ServerInstance {
         this.dbg = function (msg) {
             debug(`[${this.confID}]: ${msg}`);
         };
+    }
+
+    /**
+     * Defer to configured boot procedure.
+     * @param {boolean} override force boot, ignore config
+     * @param {Number} logLevel debug level to set, 0 quiet, 1 print error, 2 print all
+     * @param {boolean} respawnIfDead auto-reboot on process termination
+     */
+    handleInit(override = false, logLevel = this.debugLevel, respawnIfDead = this.autoRespawn) {
+        if (this.autoBoot || override) {
+            this.init(respawnIfDead, logLevel);
+        }
     }
 
     /**
@@ -61,7 +72,7 @@ class ServerInstance {
 
         //this.lastBoot = Date.getTime();
 
-        this.dbg('Initializing server');
+        this.dbg('Booting server');
 
         // spawn new instance
         const pth = path.resolve(__dirname, `${this.cfg.serverDir}`, `${this.cfg.instanceLocation}`);
@@ -193,8 +204,6 @@ class ServerInstance {
 
 }
 
-//Method for handling batch regexp hook loading per instance
-
 
 //===========================
 // Initialization segment
@@ -202,92 +211,6 @@ class ServerInstance {
 
 debug('Server Manager Initializing\nconfig read from config.json\nInitializing sub-modules');
 
-
-// initialize discord connection
-const discordInstance = new discordFrontEnd.discordFrontEnd(config.client);
-// initialize local hardware tie-in
-const hardwareInstance = new hardwareMonitor.hardwareMonitor(config.hardware);
-// initialize local queue of server instances
-const instanceQueue = {};
-
-
-//====================================
-// build instances from local config
-//====================================
-const arr = config.serverManager.instances;
-
-for (let item in arr) {
-    if (arr.hasOwnProperty(item)) {
-        debug(`Booting ${arr[item].instance}`);
-        instanceQueue[arr[item].instance] = new ServerInstance(config.serverManager.instances[item]);
-
-    }
-}
-
-
-//=========================
-//start discord
-//=========================
-discordInstance.init()
-    .then((fulfill, reject) => {
-        if (reject) {
-            debug(`Discord failed to init: ${reject}`);
-            process.exit();
-        } else if (fulfill) {
-
-            //async wait for discord bot init
-            //debug message hooking
-            let reg = /Done \((\d+?[.]\d+?)s\)!/;
-
-            for (let item in arr) {
-                if (arr.hasOwnProperty(item)) {
-                    instanceQueue[arr[item].instance].registerOutputChannel('test', reg, (data) => {
-                        let t = reg.exec(data);
-                        debug(`[${instanceQueue[`${item}`].cfg.instance}] booted in ${t[1]}s`);
-                        discordInstance.passOutput(`[${instanceQueue[`${item}`].cfg.instance}] booted in ${t[1]}s`);
-                    });
-                }
-            }
-
-
-            //Global server specific command passing
-            let dynReg = /[@](\S+)[ ]*?[!](\S+)[ ]*?[\/](.+)/;
-            discordInstance.registerInputQueue('servMatch', dynReg, (data) => {
-
-                //permission check insert here
-                //need to work on implementing team based permissionds and such
-                //TODO: Implement permissions/grouping
-
-                let matches = dynReg.exec(data.cleanContent);
-
-                if (matches.length > 3) {
-                    //we've got a valid one
-                    if (instanceQueue.hasOwnProperty(matches[2])) {
-                        let inst = instanceQueue[matches[2]];
-                        inst.passCommand(matches[3])
-                            .then(inst.dbg('cmdPass'))
-                            .catch(err => inst.dbg(err));
-                    }
-                }
-            });
-        }
-
-    });
-
-
-//========================
-//Start hardware monitor
-//========================
-hardwareInstance.init()
-    .then((resolve, reject) => {
-
-    });
-
-
-
-//===============
-// Boot instances
-//===============
-for (let key in instanceQueue) {
-    if (instanceQueue[key].autoRespawn) instanceQueue[key].init(true, instanceQueue[key].debugLevel);
-}
+module.exports = {
+    ServerInstance
+};

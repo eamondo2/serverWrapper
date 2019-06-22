@@ -2,11 +2,11 @@
   "name": "server-wrapper",
   "version": "1.0.0",
   "description": "mc server wrapper and discord bot integration/frontend",
-  "main": "serverManager.js",
+  "main": "main.js",
   "scripts": {
-    "start": "node serverManager.js",
-    "test": "cross-env DEBUG=* node serverManager.js",
-    "debug": "cross-env DEBUG=* node --inspect=localhost:9229 serverManager.js"
+    "start": "node main.js",
+    "test": "cross-env DEBUG=* node main.js",
+    "debug": "cross-env DEBUG=* node --inspect=localhost:9229 main.js"
   },
   "repository": {
     "type": "git",

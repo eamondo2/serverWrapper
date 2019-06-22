@@ -1,6 +1,6 @@
 const debug = require('debug')('regexHooker');
 
-class regexHooker {
+class RegexHooker {
 
     /**
      * Initialize
@@ -14,10 +14,19 @@ class regexHooker {
         
     }
 
+    init() {
+        //emitter 
+
+        return new Promise( (resolve, reject) => {
+            //todo
+        });
+
+    }
+
 }
 
 
 
 module.exports = {
-    regexHooker
+    RegexHooker
 };
