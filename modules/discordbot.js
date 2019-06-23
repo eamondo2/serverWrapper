@@ -3,7 +3,7 @@ const debug = require('debug')('discordFrontend');
 
 // initialize the discord bot
 
-class discordFrontEnd {
+class DiscordInstance {
     /**
      * initialize
      * @param {config} config config snippet from global
@@ -54,6 +54,13 @@ class discordFrontEnd {
 
     }
 
+    /**
+     * @returns {boolean} isStillValid
+     */
+    isStillAlive() {
+        return this.discordClient && this.discordClient.status === 0;
+    }
+
     passOutput(data, destination = this.channelID) {
         if (!this.channelID) this.channelID = this.cfg.bot.channel;
         if (!this.channel) this.channel = this.discordClient.channels.get(destination);
@@ -82,7 +89,7 @@ class discordFrontEnd {
     /**
      * Handles incoming message
      * @param {Discord.Message} data discord bot message event
-     * @param {discordFrontEnd} self the discord class instance 
+     * @param {DiscordInstance} self the discord class instance 
      */
     messageHandle(data) {
         //invalidate bot messages
@@ -120,5 +127,5 @@ class discordFrontEnd {
 }
 
 module.exports = {
-    discordFrontEnd
+    DiscordInstance
 };

@@ -1,5 +1,7 @@
 const debug = require('debug')('regexHooker');
-
+const ServerInstance = require('./serverManager.js').ServerInstance;
+const DiscordInstance = require('./discordbot').DiscordInstance;
+const path = require('path');
 class RegexHooker {
 
     /**
@@ -8,18 +10,46 @@ class RegexHooker {
      */
     constructor (config) {
         this.cfg = config;
-        
+        this.autoScan = this.cfg.autoScan;
 
-        debug('Initializing RegExp hooker');
+        this.dbg = function (msg) {
+            debug(`[RegexHooker]: ${msg}`);
+        };
+
         
     }
 
-    init() {
-        //emitter 
+    /**
+     * scans the cfg dir and appends relevant hooks
+     * @param {[ServerInstance]} instanceQueue 
+     * @param {DiscordInstance} discordInst
+     */
+    scanCfg(instanceQueue, discordInst){
+        const modules = require('./regexHooks');
+    
+        for (let inst in instanceQueue){
+            modules.globalCalls.stopCommand(instanceQueue[inst], discordInst);
+            modules.globalCalls.anyCommand(instanceQueue[inst], discordInst);
+            modules.globalCalls.doneTrigger(instanceQueue[inst], discordInst);
+            modules.globalCalls.startCommand(instanceQueue[inst], discordInst);
+            modules.globalCalls.worldLoadProgress(instanceQueue[inst], discordInst);
+            modules.globalCalls.restartCommand(instanceQueue[inst], discordInst);
 
-        return new Promise( (resolve, reject) => {
-            //todo
-        });
+        }
+    
+    }
+
+    /**
+     * initializes the hook manager
+     * @param {[ServerInstance]} instanceQueue
+     * @param {DiscordInstance} discordInst
+     */
+    init(instanceQueue, discordInst) {
+
+        if (this.autoScan) {
+            this.dbg('AutoScan enabled, loading...');
+            this.scanCfg(instanceQueue, discordInst);            
+        }
 
     }
 

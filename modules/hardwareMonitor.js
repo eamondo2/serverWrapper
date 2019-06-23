@@ -6,7 +6,7 @@ const os = require('os');
  * Bundle of methods for polling temps etc
  * contains event queue and emitter, can set temp or cpu load events to dispatch messages
  */
-class hardwareMonitor {
+class HardwareMonitor {
 
     /**
      * initialize
@@ -33,7 +33,7 @@ class hardwareMonitor {
 
 module.exports = {
 
-    hardwareMonitor
+    HardwareMonitor
 
 };
 

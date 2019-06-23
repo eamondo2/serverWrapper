@@ -6,6 +6,8 @@ const Promise = require('promise');
 const path = require('path');
 const rcon = require('rcon');
 
+const DiscordInstance = require('./discordbot').DiscordInstance;
+
 //prelim cross-compatibility measures
 const platform = require('os'),
     osType = platform;
@@ -43,19 +45,37 @@ class ServerInstance {
 
         //handle Rcon
         this.rconEnable = this.cfg.rconEnable;
+
+        this.discordRef;
+
+        this.lastWorldLoadPct = null;
        
         this.dbg = function (msg) {
             debug(`[${this.confID}]: ${msg}`);
         };
     }
-
+    
     /**
      * Defer to configured boot procedure.
      * @param {boolean} override force boot, ignore config
      * @param {Number} logLevel debug level to set, 0 quiet, 1 print error, 2 print all
      * @param {boolean} respawnIfDead auto-reboot on process termination
+     * @param {DiscordInstance} discordInstance
      */
-    handleInit(override = false, logLevel = this.debugLevel, respawnIfDead = this.autoRespawn) {
+    handleInit(discordInstance, override = false, logLevel = this.debugLevel, respawnIfDead = this.autoRespawn) {
+        
+        if (!this.discordRef) {
+            this.discordRef = discordInstance;
+        } else if (!this.discordRef.isStillAlive()) {
+            if (discordInstance.isStillAlive()) {
+                this.discordRef = discordInstance;
+            }
+        } else {
+            //can't get hold of discord
+            this.dbg('Can\'t get hold of Discord instance');
+        }
+        
+        
         if (this.autoBoot || override) {
             this.init(respawnIfDead, logLevel);
         }
@@ -65,14 +85,16 @@ class ServerInstance {
      *
      * @param {boolean} respawnIfDead
      * @param {Number} logLevel 0, quiet, 1, print error, 2, print all
+     * @param {DiscordInstance} discordInstance
      */
-    init(respawnIfDead = this.autoRespawn, logLevel) {
+    init(respawnIfDead = this.autoRespawn, logLevel = this.debugLevel) {
         this.debugLevel = logLevel;
         this.respawnIfDead = respawnIfDead;
 
         //this.lastBoot = Date.getTime();
 
         this.dbg('Booting server');
+        this.discordRef.passOutput(`[${this.confID}] Booting up.`);
 
         // spawn new instance
         const pth = path.resolve(__dirname, `${this.cfg.serverDir}`, `${this.cfg.instanceLocation}`);
@@ -97,14 +119,22 @@ class ServerInstance {
             // if we've exited, make sure we want to
             // if not, then queue for re-initialization
             this.dbg(`TERMINATED with signal ${signal}:${code}`);
+            this.discordRef.passOutput(`[${this.confID}] Process Terminated with signal ${signal} and code ${code}`);
             if (!this.terminating && this.respawnIfDead) {
                 // we want to come back, so do the thing
-                setTimeout(() => this.init(true, this.debugLevel), 20000);
+                setTimeout(() => { 
+                    this.discordRef.passOutput(`[${this.confID}] Coming back online after crash.`);
+                    this.init(true, this.debugLevel);
+                }, 
+                20000);
+            } else if (this.terminating) {
+                this.terminating = false;
             }
         });
 
         this.serverProcess.on('error', (err) => {
             this.dbg(`error: ${err}`);
+            this.discordRef.passOutput(`[${this.confID}] Process threw ${err}`);
             //terminate? 
             //determine if running
 
@@ -150,8 +180,8 @@ class ServerInstance {
      */
     gracefulTerminate() {
         this.terminating = true;
-        this.passCommand('/stop');
         this.dbg('Shutting down..');
+        this.passCommand('/stop');
     }
 
     /**
@@ -162,8 +192,8 @@ class ServerInstance {
      * @param {function} cb callback for execution on regex match
      */
     registerOutputChannel(tag, regex, cb) {
-        // test for already exist
 
+        // test for already exist
         if (!this.outputRegexQueue.hasOwnProperty(tag)) {
             this.dbg(`appended new regex trigger: ${tag} for: ${regex}`);
             this.outputRegexQueue[tag] = {
